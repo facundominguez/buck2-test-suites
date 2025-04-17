@@ -34,6 +34,20 @@
           ];
         };
 
+        toolchainLibraries = import ./ghc-toolchain-libraries.nix;
+        hsPkgs = pkgs.haskell.packages.ghc9101;
+        haskellPackages =
+          let
+            packages = builtins.map (n: hsPkgs."${n}") toolchainLibraries;
+            isHaskellLibrary = p: p ? isHaskellLibrary;
+          in
+          builtins.listToAttrs (
+            builtins.map (p: {
+              "name" = p.pname;
+              "value" = p.drvPath;
+            }) (builtins.filter isHaskellLibrary (pkgs.lib.closePropagation packages))
+          );
+
       in
       {
         devShells.default = pkgs.mkShell {
@@ -46,6 +60,9 @@
           '';
         };
         packages = {
+          ghc = hsPkgs.ghc;
+          inherit haskellPackages;
+          python = pkgs.python3.withPackages (p: with p; []);
           buck-worker = pkgs.haskell.packages.ghc9101.buck-worker;
           buck-multiplex-worker = pkgs.haskell.packages.ghc9101.buck-multiplex-worker;
         };
