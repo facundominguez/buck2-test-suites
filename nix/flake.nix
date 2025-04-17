@@ -22,24 +22,14 @@
     flake-utils.lib.eachDefaultSystem (
       system:
       let
+        overlay-haskell-packages =
+          import ./overlay-haskell-packages.nix { input = input'; };
+
         pkgs = import nixpkgs {
           inherit system;
           config.allowBroken = true;
           overlays = [
-            (self: super: {
-              haskell = super.haskell // {
-                packages = super.haskell.packages // {
-                  ghc9101 = super.haskell.packages.ghc9101.override (prev: {
-                    overrides = self.lib.composeExtensions (prev.overrides or (_: _: { })) (
-                      import ./overlay.nix {
-                        input = input';
-                        pkgs = self;
-                      }
-                    );
-                  });
-                };
-              };
-            })
+            overlay-haskell-packages
           ];
         };
 
