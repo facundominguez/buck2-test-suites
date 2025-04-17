@@ -22,13 +22,14 @@
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        overlay-haskell-packages =
-          import ./overlay-haskell-packages.nix { input = input'; };
+        overlay-ghc = import ./overlay-ghc.nix;
+        overlay-haskell-packages = import ./overlay-haskell-packages.nix { input = input'; };
 
         pkgs = import nixpkgs {
           inherit system;
           config.allowBroken = true;
           overlays = [
+            overlay-ghc
             overlay-haskell-packages
           ];
         };
@@ -37,7 +38,6 @@
       {
         devShells.default = pkgs.mkShell {
           packages = [
-            #hsenv
             pkgs.nixfmt-rfc-style
           ];
 

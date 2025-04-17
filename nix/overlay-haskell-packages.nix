@@ -104,10 +104,11 @@ let
 
       # Finally, ghc-persistent-worker packages
 
-      ghc-persistent-worker-plugin = hself.callCabal2nix "ghc-persistent-worker-plugin" (
+      ghc-persistent-worker-plugin = self.haskell.lib.overrideCabal (hself.callCabal2nix "ghc-persistent-worker-plugin" (
         input.ghc-persistent-worker + "/plugin"
-      ) { };
-
+      ) { }) (drv: {
+        configureFlags = [ "-fmwb" ];
+      });
       buck-worker = self.haskell.lib.dontCheck (
         hself.callCabal2nix "buck-worker" (input.ghc-persistent-worker + "/buck-worker") { }
       );
