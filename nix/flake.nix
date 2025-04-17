@@ -4,7 +4,7 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     ghc-persistent-worker = {
-      url = "github:MercuryTechnologies/ghc-persistent-worker/main"; # path:(local abs path)
+      url = "path:REPLACE_ME";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         flake-utils.follows = "flake-utils";

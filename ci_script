@@ -13,10 +13,8 @@ cd buck2-test-suites
 ../result/bin/buck2 build //:test
 cd ..
 
-cd ghc-persistent-worker
+sed -i -e 's|REPLACE_ME|'"$PWD"'/ghc-persistent-worker|g' buck2-test-suites/nix/flake.nix
 
-export CABAL_DIR=$PWD/.cabal
+nix build --extra-experimental-features nix-command --extra-experimental-features flakes ./buck2-test-suites/nix#buck-worker
 
-nix develop --extra-experimental-features nix-command --extra-experimental-features flakes --command cabal update
-nix develop --extra-experimental-features nix-command --extra-experimental-features flakes --command cabal build buck-worker
-nix develop --extra-experimental-features nix-command --extra-experimental-features flakes --command cabal build buck-multiplex-worker
+nix build --extra-experimental-features nix-command --extra-experimental-features flakes ./buck2-test-suites/nix#buck-multiplex-worker
