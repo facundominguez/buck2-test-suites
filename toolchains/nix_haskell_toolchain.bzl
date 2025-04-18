@@ -126,14 +126,28 @@ def _build_packages_info(ctx: AnalysisContext, ghc: RunInfo, ghc_pkg: RunInfo) -
 def truthy(value: str) -> bool:
     return value.lower() in ["true", "yes", "on"]
 
+config_worker_enable = truthy(read_config('ghc-worker', 'enable', "false"))
+
 def _nix_haskell_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
     ghc = ctx.attrs.ghc[RunInfo]
     ghc_pkg = ctx.attrs.ghc_pkg[RunInfo]
+    worker = ctx.attrs.worker[RunInfo]
+
+    # TODO this is used for compatibility with the local-GHC feature of the worker, where we don't have a wrapper script
+    # that provides the `-B` option like in nixpkgs GHCs.
+    # There are probably much better solutions, which I'll leave to the experts.
+    ghc_dir = ctx.actions.declare_output("ghc_dir")
+    ctx.actions.run(
+        cmd_args("bash", "-ec", '''$1 --print-libdir > "$2" ''', "--", ghc, ghc_dir.as_output()),
+        category = "ghc_dir_info",
+        local_only = True,
+    )
 
     return [
         DefaultInfo(),
         HaskellToolchainInfo(
             compiler = ghc,
+            ghc_dir = ghc_dir,
             packager = ghc_pkg,
             linker = ghc,
             haddock = ctx.attrs.haddock[RunInfo],
@@ -143,6 +157,8 @@ def _nix_haskell_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
             ghci_iserv_template = ctx.attrs._ghci_iserv_template,
             script_template_processor = ctx.attrs._script_template_processor,
             packages = HaskellPackagesInfo(dynamic = _build_packages_info(ctx, ghc, ghc_pkg)),
+            use_worker = config_worker_enable,
+            worker = worker,
         ),
         HaskellPlatformInfo(
             name = host_info().arch,
@@ -185,6 +201,10 @@ nix_haskell_toolchain = rule(
         "haddock": attrs.dep(
             providers = [RunInfo],
             default = "//:haddock",
+        ),
+        "worker": attrs.dep(
+            providers = [RunInfo],
+            default = "//:buck-worker",
         ),
         "flake": attrs.source(allow_directory = True),
     },

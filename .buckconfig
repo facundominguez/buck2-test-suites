@@ -24,7 +24,7 @@ materializations = deferred
 hash_all_commands = true
 
 [build]
-execution_platforms = prelude//platforms:default
+execution_platforms = root//platforms:host-persistent-worker
 
 [test]
 re_profile = default

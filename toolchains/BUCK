@@ -56,6 +56,12 @@ nix.rules.flake(
 )
 
 nix.rules.flake(
+    name = "buck-worker",
+    binary = "worker",
+    flake = "@nix//:nix_overlays",
+)
+
+nix.rules.flake(
     name = "nix_cxx",
     package = "cxx",
     flake = "@nix//:nix_overlays",
