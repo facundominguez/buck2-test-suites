@@ -14,13 +14,15 @@ export NIX_CONF_DIR=$PWD
 export GERRIT_SERVER_URL=ssh://jenkins@gerrit-server
 nix run ./buck2-test-suites/script#ci_script
 
-nix build ./buck2#buck2
-cd buck2-test-suites
-../result/bin/buck2 build //:test
-cd ..
 
 sed -i -e 's|REPLACE_ME|'"$PWD"'/ghc-persistent-worker|g' buck2-test-suites/nix/flake.nix
 
 nix build ./buck2-test-suites/nix#buck-worker
 
 nix build ./buck2-test-suites/nix#buck-multiplex-worker
+
+nix build ./buck2#buck2
+
+cd buck2-test-suites
+../result/bin/buck2 build //haskell_test/hello_world:hello_world
+cd ..

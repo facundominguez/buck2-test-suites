@@ -1,0 +1,3 @@
+load("@toolchains//:libs.bzl", "toolchain_libraries")
+
+[haskell_toolchain_library(name = lib, visibility = ["//..."]) for lib in toolchain_libraries]

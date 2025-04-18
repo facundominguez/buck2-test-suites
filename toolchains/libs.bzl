@@ -1,1 +1,3 @@
-toolchain_libraries = [ ]
+toolchain_libraries = [
+    "base",
+]

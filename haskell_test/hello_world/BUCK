@@ -1,0 +1,8 @@
+haskell_library(
+    name = "hello_world",
+    srcs = ["src/Lib.hs"],
+    compiler_flags = [],
+    deps = [
+        "//haskell:base",
+    ],
+)
