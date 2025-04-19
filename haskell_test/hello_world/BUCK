@@ -1,6 +1,10 @@
 haskell_library(
     name = "hello_world",
-    srcs = ["src/Lib.hs"],
+    srcs = [
+        "src/Lib.hs",
+        "src/A.hs",
+        "src/B.hs",
+    ],
     compiler_flags = [],
     deps = [
         "//haskell:base",
