@@ -24,5 +24,18 @@ nix build ./buck2-test-suites/nix#buck-multiplex-worker
 nix build ./buck2#buck2
 
 cd buck2-test-suites
+
+echo "###### Testing Buck2 build with ordinary GHC ######"
+
+../result/bin/buck2 clean
 ../result/bin/buck2 build //haskell_test/hello_world:hello_world
-cd ..
+../result/bin/buck2 log what-ran
+
+echo "###### Testing Buck2 build with buck-worker ######"
+
+cp .buckconfig.worker .buckconfig.local
+cp toolchains/.buckconfig.worker toolchains/.buckconfig.local
+
+../result/bin/buck2 clean
+../result/bin/buck2 build //haskell_test/hello_world:hello_world
+../result/bin/buck2 log what-ran

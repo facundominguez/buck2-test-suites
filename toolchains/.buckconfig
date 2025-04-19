@@ -1,2 +1,2 @@
 [ghc-worker]
-enable = true
+enable = false
