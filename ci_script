@@ -31,10 +31,19 @@ echo "###### Testing Buck2 build with ordinary GHC ######"
 ../result/bin/buck2 build //haskell_test/hello_world:hello_world
 ../result/bin/buck2 log what-ran
 
-echo "###### Testing Buck2 build with buck-worker ######"
+echo "###### Testing Buck2 build with buck-worker (one-shot mode) ######"
 
 cp .buckconfig.worker .buckconfig.local
 cp toolchains/.buckconfig.worker toolchains/.buckconfig.local
+
+../result/bin/buck2 clean
+../result/bin/buck2 build //haskell_test/hello_world:hello_world
+../result/bin/buck2 log what-ran
+
+echo "###### Testing Buck2 build with buck-worker (make mode) ######"
+
+cp .buckconfig.worker .buckconfig.local
+cp toolchains/.buckconfig.worker-make toolchains/.buckconfig.local
 
 ../result/bin/buck2 clean
 ../result/bin/buck2 build //haskell_test/hello_world:hello_world

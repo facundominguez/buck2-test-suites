@@ -127,6 +127,7 @@ def truthy(value: str) -> bool:
     return value.lower() in ["true", "yes", "on"]
 
 config_worker_enable = truthy(read_config('ghc-worker', 'enable', "false"))
+config_worker_make = truthy(read_config('ghc-worker', 'make', "false"))
 
 def _nix_haskell_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
     ghc = ctx.attrs.ghc[RunInfo]
@@ -159,6 +160,7 @@ def _nix_haskell_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
             packages = HaskellPackagesInfo(dynamic = _build_packages_info(ctx, ghc, ghc_pkg)),
             use_worker = config_worker_enable,
             worker = worker,
+            worker_make = config_worker_make,
         ),
         HaskellPlatformInfo(
             name = host_info().arch,
