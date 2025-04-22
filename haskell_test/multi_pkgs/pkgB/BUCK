@@ -1,0 +1,12 @@
+haskell_library(
+    name = "pkgB",
+    srcs = [
+        "src/LibB.hs",
+    ],
+    compiler_flags = [],
+    deps = [
+        "//haskell:base",
+        "//haskell_test/multi_pkgs/pkgA:pkgA"
+    ],
+    visibility = ["PUBLIC"],
+)

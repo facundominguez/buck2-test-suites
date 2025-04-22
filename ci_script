@@ -46,5 +46,11 @@ cp .buckconfig.worker .buckconfig.local
 cp toolchains/.buckconfig.worker-make toolchains/.buckconfig.local
 
 ../result/bin/buck2 clean
+
+echo "hello_world"
 ../result/bin/buck2 build //haskell_test/hello_world:hello_world
+../result/bin/buck2 log what-ran
+
+echo "multi_pkgs"
+../result/bin/buck2 build //haskell_test/multi_pkgs/...
 ../result/bin/buck2 log what-ran
