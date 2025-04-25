@@ -53,4 +53,6 @@ echo "hello_world"
 
 echo "multi_pkgs"
 ../result/bin/buck2 build //haskell_test/multi_pkgs/...
+sed -i -e 's#function#changed function#' haskell_test/multi_pkgs/pkgA/src/LibA.hs
+../result/bin/buck2 build //haskell_test/multi_pkgs/...
 ../result/bin/buck2 log what-ran
