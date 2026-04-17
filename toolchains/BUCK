@@ -1,18 +1,31 @@
+# SPDX-FileCopyrightText: 2026 Mercury Technologies, Inc.
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+load("@prelude//tests:test_toolchain.bzl", "noop_test_toolchain")
 load("@prelude//toolchains:remote_test_execution.bzl", "remote_test_execution_toolchain")
-load(":nix_bash_toolchain.bzl", "nix_bash_genrule_toolchain")
-load(":nix_cxx_toolchain.bzl", "nix_cxx_toolchain")
-load(":nix_haskell_toolchain.bzl", "nix_haskell_toolchain")
-load(":nix_python_toolchain.bzl", "nix_python_bootstrap_toolchain")
-load(":ghci.bzl", "ghci")
-load("nix.bzl", "nix")
+load("@toolchains//nix:default_toolchains.bzl", "default_flake_attrs", "default_nix_toolchains", "exec_compatible_with")
+load("@toolchains//nix:nix_build.bzl", "nix_build")
+load("@toolchains//nix:nix_haskell_toolchain.bzl", "nix_haskell_toolchain")
 
-python_bootstrap_binary(
-    name = "nix_drv_json",
-    main = "nix_drv_json.py",
-)
+# Define cxx, rust, bash, and python toolchains
+default_nix_toolchains()
 
-nix_cxx_toolchain(
-    name = "cxx",
+default_flake_attrs()
+
+remote_test_execution_toolchain(
+    name = "remote_test_execution",
+    default_profile = read_root_config("test", "re_profile", "local"),
+    profiles = {
+        "local": {
+            "capabilities": {},
+            "dependencies": [],
+            "listing_capabilities": {},
+            "local_enabled": True,
+            "remote_cache_enabled": False,
+            "use_case": "default-buck2",
+        },
+    },
     visibility = ["PUBLIC"],
 )
 
@@ -28,68 +41,48 @@ export_file(
     visibility = ["PUBLIC"],
 )
 
-nix_python_bootstrap_toolchain(
-    name = "python_bootstrap",
-    visibility = ["PUBLIC"],
-)
-
-nix_bash_genrule_toolchain(
-    name = "genrule",
-    visibility = ["PUBLIC"],
-)
-
-################################################################################
-
-nix.rules.flake(
-    name = "bash",
-    binary = "bash",
+nix_haskell_toolchain(
+    name = "haskell",
+    compiler_flags = [
+        "-fwrite-ide-info",
+    ],
+    exec_compatible_with = exec_compatible_with,
     flake = "@nix//:nix_overlays",
+    visibility = ["PUBLIC"],
 )
 
-nix.rules.flake(
+nix_build(
     name = "ghc",
     binaries = [
         "ghc-pkg",
+        "haddock",
     ],
     binary = "ghc",
     flake = "@nix//:nix_overlays",
 )
 
-nix.rules.flake(
-    name = "buck-worker",
-    binary = "worker",
+nix_build(
+    name = "hspec-discover",
+    binary = "hspec-discover",
     flake = "@nix//:nix_overlays",
-)
-
-nix.rules.flake(
-    name = "nix_cxx",
-    package = "cxx",
-    flake = "@nix//:nix_overlays",
-    binaries = ["ar", "cc", "c++", "nm", "objcopy", "ranlib", "strip"],
-)
-
-nix.rules.flake(
-    name = "haddock",
-    flake = "@nix//:nix_overlays",
-    binary = "haddock",
-)
-
-nix.rules.flake(
-    name = "python",
-    flake = "@nix//:nix_overlays",
-    binary = "python",
-)
-
-nix_haskell_toolchain(
-    name = "haskell",
     visibility = ["PUBLIC"],
-    compiler_flags = [
-        "-fwrite-ide-info",
-    ],
-    flake = "@nix//:nix_overlays",
 )
 
-ghci(
-    name = "ghci",
+noop_test_toolchain(
+    name = "test",
+    visibility = ["PUBLIC"],
+)
+
+nix_build(
+    name = "ripgrep",
+    binary = "rg",
+    flake = "@nix//:nix_overlays",
+    visibility = ["PUBLIC"],
+)
+
+nix_build(
+    name = "skopeo",
+    binary = "skopeo",
+    flake = "@nix//:nix_overlays",
     visibility = ["PUBLIC"],
 )

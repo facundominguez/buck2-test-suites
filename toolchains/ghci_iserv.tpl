@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Mercury Technologies, Inc.
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
 # iserv template for GHCi
 
 # binutils_path: <binutils_path>

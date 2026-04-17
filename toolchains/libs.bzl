@@ -1,3 +1,0 @@
-toolchain_libraries = [
-    "base",
-]

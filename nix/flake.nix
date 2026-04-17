@@ -1,15 +1,23 @@
+# SPDX-FileCopyrightText: 2026 Mercury Technologies, Inc.
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
 {
-  description = "Providing toolchain dependencies via flake";
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
-    ghc-persistent-worker = {
-      url = "path:REPLACE_ME";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        flake-utils.follows = "flake-utils";
-      };
-    };
+  description = "buck2 toolchains flake";
+
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+  inputs.flake-utils.url = "github:numtide/flake-utils/v1.0.0";
+
+  # We want this for whatever unstable features buck2 is using.
+  inputs.fenix = {
+    url = "github:nix-community/fenix";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+
+  inputs.flake-compat = {
+    url = "https://github.com/lix-project/flake-compat/archive/main.tar.gz";
+    flake = false;
   };
 
   outputs =
@@ -17,54 +25,39 @@
       self,
       nixpkgs,
       flake-utils,
-      ghc-persistent-worker,
-    }@input':
+      fenix,
+      ...
+    }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        overlay-ghc = import ./overlay-ghc.nix;
-        overlay-haskell-packages = import ./overlay-haskell-packages.nix { input = input'; };
-
+        # FIXME(jadel): necessary patches need to get ported to 9.14, then
+        # switch to 9.14 here.
+        compilerName = "ghc9103";
         pkgs = import nixpkgs {
           inherit system;
-          config.allowBroken = true;
-          overlays = [
-            overlay-ghc
-            overlay-haskell-packages
+          overlays = import ./overlays ++ [
+            fenix.overlays.default
+            (final: prev: {
+              mercury = prev.mercury.overrideScope (
+                mfinal: mprev: {
+                  inherit compilerName;
+                }
+              );
+            })
           ];
         };
-
-        toolchainLibraries = import ./ghc-toolchain-libraries.nix;
-        hsPkgs = pkgs.haskell.packages.ghc9101;
-        haskellPackages =
-          let
-            packages = builtins.map (n: hsPkgs."${n}") toolchainLibraries;
-            isHaskellLibrary = p: p ? isHaskellLibrary;
-          in
-          builtins.listToAttrs (
-            builtins.map (p: {
-              "name" = p.pname;
-              "value" = p.drvPath;
-            }) (builtins.filter isHaskellLibrary (pkgs.lib.closePropagation packages))
-          );
-
       in
       {
-        devShells.default = pkgs.mkShell {
-          packages = [
-            pkgs.nixfmt-rfc-style
-          ];
+        packages = pkgs.mercury.buck2-toolchain;
 
-          shellHook = ''
-            export PS1="\n[buck2-test-suites:\w]$ \0"
-          '';
+        devShells = {
+          default = pkgs.mercury.shell;
         };
-        packages = {
-          ghc = hsPkgs.ghc;
-          inherit haskellPackages;
-          python = pkgs.python3.withPackages (p: with p; []);
-          buck-worker = pkgs.haskell.packages.ghc9101.buck-worker;
-          buck-multiplex-worker = pkgs.haskell.packages.ghc9101.buck-multiplex-worker;
+
+        legacyPackages = {
+          inherit pkgs;
+          hsPkgs = pkgs.haskell.packages.${pkgs.mercury.compilerName};
         };
       }
     );

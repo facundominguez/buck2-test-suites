@@ -1,3 +1,0 @@
-[ghc-worker]
-enable = true
-make = true
