@@ -379,4 +379,15 @@ final: [
   ./haddock-ghc9101-mem-improv-backport.patch
 
   ./haddock-ghc9101-det-iface-re-export.patch
+
+  # The following 4 patches went into 9.12 in
+  # https://gitlab.haskell.org/ghc/ghc/-/merge_requests/12707
+
+  ./haddock-ghc9101-support-for-one-shot.patch
+
+  ./haddock-ghc9101-merge-package-interfaces-when-generating-contents.patch
+
+  ./haddock-ghc9101-do-not-load-in-attachInstances-in-one-shot-mode.patch
+  
+  ./haddock-ghc9101-dynFlags-with-extensions-set-in-source.patch
 ]
