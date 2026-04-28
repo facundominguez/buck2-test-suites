@@ -16,4 +16,17 @@ DIR=$(dirname "$0")
 # ghci_packager: <ghci_packager>
 # ghci_ghc_path: <ghci_ghc_path>
 
-exec <user_ghci_path> <package_dbs> -ghci-script "$DIR/<start_ghci>" "$DIR/<squashed_so>" "$@"
+# Add plugin tools to PATH if present
+PLUGIN_TOOLS_DIR="$DIR/<name>.plugin-tools"
+if [ -d "$PLUGIN_TOOLS_DIR" ]; then
+  export PATH="$PLUGIN_TOOLS_DIR:$PATH"
+fi
+
+# Ensure a valid TMPDIR for GHC compilation (e.g., when loading sources in GHCi).
+# nix-shell may set TMPDIR to a session-specific directory that doesn't
+# exist when the script is executed by another process (e.g., buck2 test).
+if [ -n "$TMPDIR" ] && [ ! -d "$TMPDIR" ]; then
+  export TMPDIR=/tmp
+fi
+
+exec <user_ghci_path> <package_dbs> <compiler_flags> -ghci-script "$DIR/<start_ghci>" "$DIR/<squashed_so>" "$@"
