@@ -26,6 +26,7 @@
   rustc,
   skopeo,
   watchman,
+  z3,
 # keep-sorted end
 }:
 let
@@ -146,7 +147,7 @@ in
     meta.description = "rust toolchain for buck2, similar in structure to buck2-toolchain.cxx";
   };
 
-  inherit haskellPackages;
+  inherit haskellPackages z3;
   inherit (hsPkgs) ghc;
 
   bash = writeShellScriptBin "bash" ''

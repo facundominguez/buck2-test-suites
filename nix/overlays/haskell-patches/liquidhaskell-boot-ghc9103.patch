@@ -1,0 +1,153 @@
+diff --git a/src-ghc/Liquid/GHC/API.hs b/src-ghc/Liquid/GHC/API.hs
+index 16991e9..8638d00 100644
+--- a/src-ghc/Liquid/GHC/API.hs
++++ b/src-ghc/Liquid/GHC/API.hs
+@@ -55,7 +55,7 @@ import           GHC                  as Ghc
+     , LexicalFixity(Prefix)
+     , Located
+     , LocatedN
+-    , ModIface_(mi_anns, mi_exports, mi_globals, mi_module)
++    , ModIface_(mi_anns, mi_exports, mi_module)
+     , ModLocation(ml_hs_file)
+     , ModSummary(ms_hspp_file, ms_hspp_opts, ms_location, ms_mod)
+     , Module
+@@ -118,7 +118,6 @@ import           GHC                  as Ghc
+     , mkModuleName
+     , mkSrcLoc
+     , mkSrcSpan
+-    , modInfoTopLevelScope
+     , moduleName
+     , moduleNameString
+     , moduleUnit
+@@ -480,7 +479,7 @@ import GHC.Hs                         as Ghc
+ import GHC.HsToCore.Expr              as Ghc
+     ( dsLExpr )
+ import GHC.Iface.Binary               as Ghc
+-    ( TraceBinIFace(QuietBinIFace), getWithUserData, putWithUserData )
++    ( TraceBinIFace(QuietBinIFace), CompressionIFace(SafeExtraCompression), getWithUserData, putWithUserData )
+ import GHC.Iface.Errors.Ppr            as Ghc
+     ( missingInterfaceErrorDiagnostic )
+ import GHC.Iface.Load                 as Ghc
+@@ -490,7 +489,7 @@ import GHC.Iface.Load                 as Ghc
+     )
+ import GHC.Rename.Expr                as Ghc (rnLExpr)
+ import GHC.Rename.Names               as Ghc
+-    ( renamePkgQual
++    ( hscRenamePkgQual
+     )
+ import GHC.Tc.Errors.Types            as Ghc
+     ( mkTcRnUnknownMessage )
+@@ -759,7 +758,9 @@ import GHC.Unit.Finder                as Ghc
+     , findImportedModule
+     )
+ import GHC.Unit.Home.ModInfo          as Ghc
+-    ( HomePackageTable, HomeModInfo(hm_iface), lookupHpt )
++    ( HomeModInfo(hm_iface) )
++import GHC.Unit.Home.PackageTable     as Ghc
++    ( HomePackageTable, lookupHpt )
+ import GHC.Unit.Module                as Ghc
+     ( GenWithIsBoot(gwib_isBoot, gwib_mod)
+     , IsBootInterface(NotBoot, IsBoot)
+diff --git a/src/Language/Haskell/Liquid/GHC/Interface.hs b/src/Language/Haskell/Liquid/GHC/Interface.hs
+index 3712f19..02c82fb 100644
+--- a/src/Language/Haskell/Liquid/GHC/Interface.hs
++++ b/src/Language/Haskell/Liquid/GHC/Interface.hs
+@@ -144,21 +144,6 @@ lookupTyThing tyEnv name = do
+         , lookupName name
+         ]
+ 
+-_dumpTypeEnv :: TypecheckedModule -> IO ()
+-_dumpTypeEnv tm = do
+-  print ("DUMP-TYPE-ENV" :: String)
+-  print (showpp <$> tcmTyThings tm)
+-
+-tcmTyThings :: TypecheckedModule -> Maybe [Name]
+-tcmTyThings
+-  =
+-  -- typeEnvElts
+-  -- . tcg_type_env . fst
+-  -- . md_types . snd
+-  -- . tm_internals_
+-  modInfoTopLevelScope
+-  . tm_checked_module_info
+-
+ modSummaryHsFile :: ModSummary -> FilePath
+ modSummaryHsFile modSummary =
+   fromMaybe
+diff --git a/src/Language/Haskell/Liquid/GHC/Plugin/Serialisation.hs b/src/Language/Haskell/Liquid/GHC/Plugin/Serialisation.hs
+index 3fb707c..01cefd9 100644
+--- a/src/Language/Haskell/Liquid/GHC/Plugin/Serialisation.hs
++++ b/src/Language/Haskell/Liquid/GHC/Plugin/Serialisation.hs
+@@ -43,16 +43,19 @@ getLiquidLibBytesFromEPS thisModule eps = extractFromEps
+ getLiquidLibBytes :: GHC.Module
+                         -> GHC.ExternalPackageState
+                         -> GHC.HomePackageTable
+-                        -> Maybe LiquidLibBytes
+-getLiquidLibBytes thisModule eps hpt =
+-    asum [extractFromHpt, getLiquidLibBytesFromEPS thisModule eps]
++                        -> IO (Maybe LiquidLibBytes)
++getLiquidLibBytes thisModule eps hpt = do
++    fromHpt <- extractFromHpt
++    pure $ asum [fromHpt, getLiquidLibBytesFromEPS thisModule eps]
+   where
+-    extractFromHpt :: Maybe LiquidLibBytes
++    extractFromHpt :: IO (Maybe LiquidLibBytes)
+     extractFromHpt = do
+-      modInfo <- GHC.lookupHpt hpt (GHC.moduleName thisModule)
+-      guard (thisModule == (GHC.mi_module . GHC.hm_iface $ modInfo))
+-      xs <- mapM (GHC.fromSerialized LiquidLibBytes . GHC.ifAnnotatedValue) (GHC.mi_anns . GHC.hm_iface $ modInfo)
+-      listToMaybe xs
++      mb_modInfo <- GHC.lookupHpt hpt (GHC.moduleName thisModule)
++      pure $ do
++          modInfo <- mb_modInfo
++          guard (thisModule == (GHC.mi_module . GHC.hm_iface $ modInfo))
++          xs <- mapM (GHC.fromSerialized LiquidLibBytes . GHC.ifAnnotatedValue) (GHC.mi_anns . GHC.hm_iface $ modInfo)
++          listToMaybe xs
+ 
+ newtype LiquidLibBytes = LiquidLibBytes { unLiquidLibBytes :: [Word8] }
+ 
+@@ -71,7 +74,7 @@ deserialiseLiquidLib
+   -> GHC.NameCache
+   -> IO (Maybe LiquidLib)
+ deserialiseLiquidLib thisModule eps hpt nameCache = do
+-    let mlibbs = getLiquidLibBytes thisModule eps hpt
++    mlibbs <- getLiquidLibBytes thisModule eps hpt
+     case mlibbs of
+       Just (LiquidLibBytes ws) -> do
+         let bs = B.pack ws
+@@ -95,7 +98,7 @@ encodeLiquidLib :: LiquidLib -> IO B.ByteString
+ encodeLiquidLib lib0 = do
+     let (lib1, ns) = collectLHNames lib0
+     bh <- GHC.openBinMem (1024*1024)
+-    GHC.putWithUserData GHC.QuietBinIFace bh ns
++    GHC.putWithUserData GHC.QuietBinIFace GHC.SafeExtraCompression bh ns
+     GHC.withBinBuffer bh $ \bs ->
+       return $ Builder.toLazyByteString $ B.execPut (B.put lib1) <> Builder.fromByteString bs
+ 
+diff --git a/src/Language/Haskell/Liquid/GHC/Plugin/SpecFinder.hs b/src/Language/Haskell/Liquid/GHC/Plugin/SpecFinder.hs
+index ea6c7b5..97efb76 100644
+--- a/src/Language/Haskell/Liquid/GHC/Plugin/SpecFinder.hs
++++ b/src/Language/Haskell/Liquid/GHC/Plugin/SpecFinder.hs
+@@ -109,7 +109,8 @@ configToRedundantDependencies env cfg = do
+ 
+     lookupLiquidBaseModule :: ModuleName -> IO (Maybe StableModule)
+     lookupLiquidBaseModule mn = do
+-      res <- findImportedModule env mn (renamePkgQual (hsc_unit_env env) mn (Just "liquidhaskell"))
++      pkgQual <- hscRenamePkgQual env mn (Just "liquidhaskell")
++      res <- findImportedModule env mn pkgQual
+       case res of
+         Found _ mdl -> pure $ Just (toStableModule mdl)
+         _           -> pure Nothing
+diff --git a/src/Language/Haskell/Liquid/GHC/TypeRep.hs b/src/Language/Haskell/Liquid/GHC/TypeRep.hs
+index 1480f7b..0f3a9e1 100644
+--- a/src/Language/Haskell/Liquid/GHC/TypeRep.hs
++++ b/src/Language/Haskell/Liquid/GHC/TypeRep.hs
+@@ -46,8 +46,6 @@ eqType' _ _
+   = False 
+ 
+ 
+-deriving instance (Eq tyvar, Eq argf) => Eq (VarBndr tyvar argf)
+-
+ showTy :: Type -> String 
+ showTy (TyConApp c ts) = "(RApp   " ++ showPpr c ++ " " ++ sep' ", " (showTy <$> ts) ++ ")"
+ showTy (AppTy t1 t2)   = "(TAppTy " ++ (showTy t1 ++ " " ++ showTy t2) ++ ")" 

@@ -39,8 +39,29 @@ let
       );
   };
 
+  # Patch liquidhaskell-boot for Mercury-patched GHC 9.10.3.
+  # The Mercury GHC patches remove mi_globals, move HomePackageTable,
+  # change lookupHpt to IO, add CompressionIFace param to putWithUserData,
+  # add UnitIndexQuery param to renamePkgQual, and add Eq (VarBndr) instance.
+  patchLiquidHaskell = hfinal: hprev: {
+    liquidhaskell-boot = hprev.liquidhaskell-boot.overrideAttrs (old: {
+      patches = (old.patches or [ ]) ++ [
+        ../overlays/haskell-patches/liquidhaskell-boot-ghc9103.patch
+        ../overlays/haskell-patches/liquidhaskell-boot-plugin-package.patch
+      ];
+    });
+
+    liquidhaskell = hprev.liquidhaskell.overrideAttrs (old: {
+      # LiquidHaskell self-hosts: it uses itself as a GHC plugin during
+      # compilation of its own _LHAssumptions modules, which invokes z3.
+      buildInputs = (old.buildInputs or [ ]) ++ [ final.z3 ];
+      nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ final.z3 ];
+    });
+  };
+
   allHaskellOverlays = [
     fixPackageDB
+    patchLiquidHaskell
   ];
 in
 makeHaskellOverlay (lib.composeManyExtensions allHaskellOverlays)
