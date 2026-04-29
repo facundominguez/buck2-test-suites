@@ -13,4 +13,5 @@
     "filepath"
     "hspec"
     "hspec-expectations"
+    "inspection-testing"
 ]
