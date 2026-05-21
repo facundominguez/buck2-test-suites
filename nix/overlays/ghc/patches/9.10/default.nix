@@ -376,6 +376,14 @@ final: [
     excludes = [ "testsuite/**" ];
   })
 
+  # enableCodeGenForTh only when codegen is on for MkDepend mode
+  # In HEAD: Not yet.
+  (final.fetchpatch {
+    url = "https://github.com/MercuryTechnologies/ghc/commit/6ad23abc831eccb62b29e8d9b6233667036e34a9.diff";
+    hash = "sha256-RvgH/yxp8HTMKtx/0brDFBhBHXYSScW0w0pRzMEuQPM=";
+    excludes = [ "testsuite/**" ];
+  })
+
   ./haddock-ghc9101-mem-improv-backport.patch
 
   ./haddock-ghc9101-det-iface-re-export.patch
