@@ -15,5 +15,4 @@
     "hspec-expectations"
     "inspection-testing"
     "liquidhaskell"
-    "liquidhaskell-boot"
 ]
