@@ -6,9 +6,36 @@
 Run a `nix build` command for a given `flake` and `attr` to build.
 """
 
+def _make_bin_wrapper(ctx: AnalysisContext, nix_path_out: Artifact, binary: str) -> (Artifact, RunInfo):
+    """Create an executable wrapper script that reads nix_path_out and execs the binary.
+
+    Returns both the wrapper script artifact and a RunInfo that declares nix_path_out
+    as a hidden dependency so buck2 materializes it before any action that uses this tool.
+    """
+    wrapper = ctx.actions.write(
+        "wrapper_{}".format(binary),
+        cmd_args(
+            "#!/usr/bin/env bash\nexec \"$(cat '",
+            nix_path_out,
+            "')/bin/",
+            binary,
+            "\" \"$@\"\n",
+            delimiter = "",
+        ),
+        is_executable = True,
+    )
+    # The hidden dependency ensures nix_path_out is materialized before any action
+    # that uses this RunInfo as its executor.
+    run_info = RunInfo(args = cmd_args(wrapper, hidden = [nix_path_out]))
+    return wrapper, run_info
+
 def _nix_build_impl(ctx: AnalysisContext):
     """
     calls nix build path:<flake-path>#<attr>
+
+    Produces a text file `nix_path` containing the nix store path of the built
+    derivation (e.g. `/nix/store/abc-ghc-9.4.8`). This is a regular file and
+    can be uploaded to the remote action cache, unlike a symlink.
     """
     flake = ctx.attrs.flake
     attr = ctx.attrs.attr or ctx.label.name
@@ -16,77 +43,48 @@ def _nix_build_impl(ctx: AnalysisContext):
     binaries = ctx.attrs.binaries
 
     attr_suffix = attr
-    out_name = "out.link"
     if ctx.attrs.suffix:
         attr_suffix = cmd_args(attr, ctx.attrs.suffix, delimiter = "^")
-        if ctx.attrs.suffix != "out":
-            # Even if `out` isn't the default output _and_ it's specified
-            # explicitly, Nix will write `out.link` (not `out.link-out`) for
-            # the output named `out`.
-            out_name = "out.link-{}".format(ctx.attrs.suffix)
-    out_link = ctx.actions.declare_output(out_name)
 
-    # When we pass an `--out-link out.link` to Nix, it adds suffixes (e.g.
-    # `out.link-man`) based on the names of the outputs of the built
-    # derivation.
-    #
-    # Therefore, we always need to pass a path to a plain `out.link`, even if
-    # the default output we want to return includes a suffix for a specific
-    # non-default named output.
-    #
-    # NB: If you do (e.g.) `nix build --out-link out.link nixpkgs#libheif.man`,
-    # Nix will write (perhaps unintuitively) an `out.link-man` link, even
-    # though you're building a single output.
-    out_link_for_nix = cmd_args(
-        out_link.as_output(),
-        parent = 1,
-        absolute_suffix = "/out.link",
-        hidden = [out_link.as_output()],
-    )
+    # Declare a text file output containing the nix store path.
+    nix_path_out = ctx.actions.declare_output("nix_path")
 
     nix_build = cmd_args([
         "env",
         "--",  # this is needed to avoid "Spawning executable `nix` failed: Failed to spawn a process"
-        "nix",
-        "build",
-        "--print-build-logs",
-        "--show-trace",
-        # --no-update-lock-file: if the flake.lock file does not match the flake.nix, error out.
-        # This prevents highly baffling behaviour that should be done by the user rather than by buck2.
-        "--no-update-lock-file",
-        # Don't use flake registries if someone omits something from `inputs.*` but puts it in `outputs` args.
-        "--no-use-registries",
-        cmd_args("--out-link", out_link_for_nix),
+        "bash",
+        "-o", "pipefail",
+        "-ec",
+        # Build the nix package (without creating a GC-root symlink), then
+        # capture the output path into the declared output text file.
+        "nix build --no-link --print-out-paths --print-build-logs --show-trace --no-update-lock-file --no-use-registries \"$1\" | head -1 | tr -d '\\n' > \"$2\"",
+        "--",
         cmd_args(cmd_args(flake, attr_suffix, delimiter = "#"), absolute_prefix = "path:"),
+        nix_path_out.as_output(),
     ])
-    ctx.actions.run(nix_build, category = "nix_build", local_only = True)
+    ctx.actions.run(nix_build, category = "nix_build", prefer_local = True, allow_cache_upload = True)
 
     run_info = []
     if binary:
-        run_info.append(
-            RunInfo(
-                args = cmd_args(out_link, "bin", ctx.attrs.binary, delimiter = "/"),
-            ),
-        )
+        wrapper, wrapper_run_info = _make_bin_wrapper(ctx, nix_path_out, binary)
+        run_info.append(wrapper_run_info)
 
     nix_dynamic_info = NixDynamicInfo(
-        dynamic = _read_out_link(ctx, out_link),
+        dynamic = _read_nix_path(ctx, nix_path_out),
     )
 
-    sub_targets = {
-        bin: [DefaultInfo(default_output = out_link), RunInfo(args = cmd_args(out_link, "bin", bin, delimiter = "/"))]
-        for bin in binaries
-    }
+    sub_targets = {}
+    for bin in binaries:
+        bin_wrapper, bin_run_info = _make_bin_wrapper(ctx, nix_path_out, bin)
+        sub_targets[bin] = [DefaultInfo(default_output = bin_wrapper), bin_run_info]
 
     return [
         DefaultInfo(
-            default_output = out_link,
+            default_output = nix_path_out,
             sub_targets = sub_targets,
         ),
-        # Note: This is just a path to the `bin` directory, it doesn't actually
-        # have to exist!
         BinDirInfo(
-            args = cmd_args(out_link, "bin", delimiter = "/"),
+            args = cmd_args(nix_path_out),
         ),
         # absolute nix path information will be recorded here. It is a dynamic value.
         nix_dynamic_info,
@@ -122,19 +120,11 @@ _read_out_link_dynamic = dynamic_actions(
 )
 
 # FIXME(jadel): this is duplicate logic as in haskell/mercury_haskell.bzl. Needs to be DRY'd up eventually.
-def _read_out_link(ctx: AnalysisContext, out_link: Artifact) -> DynamicValue:
-    read_link = ctx.actions.declare_output("read_link")
-    ctx.actions.run(
-        cmd_args("bash", "-ec", """readlink $1 | tr -d '\\n' > $2""", "--", out_link, read_link.as_output()),
-        category = "nix_path",
-        local_only = True,
-    )
-
-    dyn_nix_path = ctx.actions.dynamic_output_new(_read_out_link_dynamic(
-        read_link = read_link,
+def _read_nix_path(ctx: AnalysisContext, nix_path_out: Artifact) -> DynamicValue:
+    """Read the nix store path from the nix_path text file artifact."""
+    return ctx.actions.dynamic_output_new(_read_out_link_dynamic(
+        read_link = nix_path_out,
     ))
-
-    return dyn_nix_path
 
 BinDirInfo = provider(
     doc = """Provides the path of the `/bin` directory of a derivation output.""",

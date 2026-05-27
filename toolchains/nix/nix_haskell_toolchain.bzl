@@ -28,11 +28,13 @@ def __nix_build_drv(
         nix_config: dict[str, str | list[str]],
         drv: str,
         package: str,
-        deps) -> Artifact:
+        deps,
+        nix_out_path: str) -> Artifact:
     # calls nix build /path/to/file.drv^*
+    # Produces a text file containing the nix store output path (not a symlink).
 
     command = cmd_args(nix_wrapper, hidden = deps)
-    out_link = actions.declare_output(package, "out.link")
+    nix_path_out = actions.declare_output(package, "nix_path")
 
     for name, value in nix_config.items():
         if isinstance(value, list):
@@ -44,11 +46,13 @@ def __nix_build_drv(
         "--print-build-logs",
         cmd_args(drv, format = "{}^*"),
         "--buck2-output",
-        out_link.as_output(),
+        nix_path_out.as_output(),
+        "--nix-output-path",
+        nix_out_path,
     ])
-    actions.run(nix_build, category = "nix_build", identifier = package, local_only = True)
+    actions.run(nix_build, category = "nix_build", identifier = package, prefer_local = True, allow_cache_upload = True)
 
-    return out_link
+    return nix_path_out
 
 def _dynamic_build_derivation_impl(actions: AnalysisActions, arg, drv_json: ArtifactValue, ghc_info: ArtifactValue, nix_config_json: ArtifactValue) -> list[Provider]:
     json_drvs = drv_json.read_json()
@@ -100,11 +104,12 @@ def _dynamic_build_derivation_impl(actions: AnalysisActions, arg, drv_json: Arti
             package = name,
             drv = drv,
             deps = [deps[dep] for dep in drv_info["deps"]],
+            nix_out_path = drv_info["output"],
         )
 
         pkgs[name] = actions.tset(
             HaskellToolchainPackageDbTSet,
-            value = HaskellToolchainPackage(db = cmd_args(deps[drv], package_conf_dir, delimiter = "/"), path = deps[drv]),
+            value = HaskellToolchainPackage(db = cmd_args(drv_info["output"], package_conf_dir, delimiter = "/"), path = deps[drv]),
             children = this_pkg_deps,
         )
 
@@ -168,7 +173,8 @@ def _make_drv_json(ctx: AnalysisContext, name: str) -> Artifact:
     ctx.actions.run(
         cmd,
         category = "nix_drv",
-        local_only = True,
+        prefer_local = True,
+        allow_cache_upload = True,
     )
     return drv_json
 
@@ -177,7 +183,8 @@ def _make_ghc_info(ctx: AnalysisContext, ghc: RunInfo) -> Artifact:
     ctx.actions.run(
         cmd_args("bash", "-ec", '''printf '{ "version": "%s" }\n' "$( $1 --numeric-version )" > "$2" ''', "--", ghc, ghc_info.as_output()),
         category = "ghc_info",
-        local_only = True,
+        prefer_local = True,
+        allow_cache_upload = True,
     )
     return ghc_info
 
@@ -187,7 +194,8 @@ def _get_nix_config(ctx: AnalysisContext) -> Artifact:
     ctx.actions.run(
         cmd_args("bash", "-ec", '''nix eval --json --apply 'f: f.nixConfig or {}' --file "$1/flake.nix" > "$2" ''', "--", flake, nix_config_json.as_output()),
         category = "nix_config",
-        local_only = True,
+        prefer_local = True,
+        allow_cache_upload = True,
     )
     return nix_config_json
 
@@ -224,7 +232,8 @@ def _nix_haskell_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
     ctx.actions.run(
         cmd_args("bash", "-ec", '''$1 --print-libdir > "$2" ''', "--", ghc, ghc_dir.as_output()),
         category = "ghc_dir_info",
-        local_only = True,
+        prefer_local = True,
+        allow_cache_upload = True,
     )
 
     sub_targets = {}

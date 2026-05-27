@@ -15,7 +15,7 @@ default_flake_attrs()
 
 remote_test_execution_toolchain(
     name = "remote_test_execution",
-    default_profile = read_root_config("test", "re_profile", "local"),
+    default_profile = None,
     profiles = {
         "local": {
             "capabilities": {},
@@ -24,6 +24,14 @@ remote_test_execution_toolchain(
             "local_enabled": True,
             "remote_cache_enabled": False,
             "use_case": "default-buck2",
+        },
+        "re_cache": {
+            "capabilities": {},
+            "dependencies": [],
+            "listing_capabilities": {},
+            "local_enabled": True,
+            "remote_cache_enabled": True,
+            "use_case": "buck2-default",
         },
     },
     visibility = ["PUBLIC"],

@@ -7,10 +7,8 @@
 """Wrapper script to call nix"""
 
 import argparse
-import os
 import subprocess
 import sys
-import time
 
 
 def main():
@@ -20,7 +18,12 @@ def main():
     parser.add_argument(
         "--buck2-output",
         required=True,
-        help="Output link",
+        help="Output path file (text file that will contain the nix store path)",
+    )
+    parser.add_argument(
+        "--nix-output-path",
+        required=False,
+        help="Known nix output path to write to the output file (bypasses --print-out-paths)",
     )
 
     args, nix_args = parser.parse_known_args()
@@ -34,9 +37,13 @@ def main():
         "--no-update-lock-file",
         # Don't use flake registries if someone omits something from `inputs.*` but puts it in `outputs` args.
         "--no-use-registries",
-        "--out-link",
-        args.buck2_output,
+        # Build without creating a GC-root symlink; the output path is either
+        # passed via --nix-output-path or captured from --print-out-paths.
+        "--no-link",
     ]
+
+    if args.nix_output_path is None:
+        cmd.append("--print-out-paths")
 
     # NOTE 1: We time-out nix build.
     # We assume nix dependencies are all already previously populated
@@ -48,31 +55,23 @@ def main():
     # disabled for now until nix cache problem solved.
     # timeout_seconds = 30
 
-    # NOTE 2: Buck2 swallows stdout on successful builds.
-    # Redirect to stderr to avoid this.
-    returncode = subprocess.check_call(
+    result = subprocess.run(
         cmd,
+        stdout=subprocess.PIPE,
         stderr=sys.stderr.buffer,  # timeout=timeout_seconds # TODO: disabled for now until nix cache problem solved
     )
 
-    if returncode != 0:
-        return returncode
+    if result.returncode != 0:
+        return result.returncode
 
-    does_exist = os.path.exists(args.buck2_output)
-    if not does_exist:
-        time.sleep(1)
-        # Second chance. This is a work-around for the issue [DUX-3095]
-        # which is observed on MacOS; nix build --out-link does not create
-        # output symlink needed for Buck2, and exit with exit code 0.
-        # The issue is largely resolved by running nix build once more.
-        # TODO: Fix Nix or wherever the root cause exists.
-        returncode2 = subprocess.check_call(
-            cmd,
-            stdout=sys.stderr.buffer,  # timeout=timeout_seconds # disabled for now until nix cache problem solved
-        )
-        does_exist_2 = os.path.exists(args.buck2_output)
-        print("does it exist after re-run? : {}".format(does_exist_2), file=sys.stderr)
-        return returncode2
+    if args.nix_output_path is not None:
+        nix_path = args.nix_output_path.encode()
+    else:
+        # Take the first output path printed (the 'out' output).
+        nix_path = result.stdout.split(b"\n")[0].strip()
+
+    with open(args.buck2_output, "wb") as f:
+        f.write(nix_path)
 
     return 0
 
