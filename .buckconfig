@@ -9,6 +9,7 @@ buck2-haskell = buck2-haskell
 toolchains = toolchains
 nix = nix
 none = none
+platforms = platforms
 
 [cell_aliases]
 config = prelude
@@ -20,6 +21,12 @@ buck = none
 
 [external_cells]
 prelude = bundled
+
+[buck2_re_client]
+engine_address = grpc://localhost:50051
+action_cache_address = grpc://localhost:50051
+cas_address = grpc://localhost:50051
+tls = false
 
 [parser]
 # Use the default target platform in each cell. We have to set this explicitly
@@ -35,7 +42,8 @@ target_platform_detector_spec = \
     target:root//...->prelude//platforms:default \
     target:toolchains//...->prelude//platforms:default \
     target:buck2-haskell//...->prelude//platforms:default \
-    target:nix//...->prelude//platforms:default
+    target:nix//...->prelude//platforms:default \
+    target:platforms//...->prelude//platforms:default
 
 [project]
 # See Note [File watching].
@@ -63,6 +71,7 @@ ignore = .git, .jj, dist-newstyle, dist, .hiefiles, .hifiles, .devel-logs, .pc, 
 materializations = deferred
 hash_all_commands = true
 file_watcher = watchman
+default_allow_cache_upload = true
 
 [build]
 execution_platforms = prelude//platforms:default
