@@ -1,0 +1,8 @@
+[buck2_re_client]
+engine_address = grpc://localhost:50051
+action_cache_address = grpc://localhost:50051
+cas_address = grpc://localhost:50051
+tls = false
+
+[buck2]
+default_allow_cache_upload = true
