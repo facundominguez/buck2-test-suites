@@ -1,0 +1,192 @@
+{
+  stores: [
+    {
+      name: 'AC_MAIN_STORE',
+      filesystem: {
+        content_path: '/build/data-worker-test/content_path-ac',
+        temp_path: '/build/data-worker-test/tmp_path-ac',
+        eviction_policy: {
+          // 1gb.
+          max_bytes: 1000000000,
+        },
+      },
+    },
+    {
+      name: 'WORKER_FAST_SLOW_STORE',
+      fast_slow: {
+        // "fast" must be a "filesystem" store because the worker uses it to make
+        // hardlinks on disk to a directory where the jobs are running.
+        fast: {
+          filesystem: {
+            content_path: '/build/data-worker-test/content_path-cas',
+            temp_path: '/build/data-worker-test/tmp_path-cas',
+            eviction_policy: {
+              // 10gb.
+              max_bytes: 10000000000,
+            },
+          },
+        },
+        slow: {
+          /// Discard data.
+          /// This example usage has the CAS and the Worker live in the same place,
+          /// so they share the same underlying CAS. Since workers require a fast_slow
+          /// store, we use the fast store as our primary data store, and the slow store
+          /// is just a noop, since there's no shared storage in this config.
+          noop: {},
+        },
+      },
+    },
+  ],
+  schedulers: [
+    {
+      name: 'MAIN_SCHEDULER',
+      simple: {
+        supported_platform_properties: {
+          'cpu_count': 'minimum',
+          'memory_kb': 'minimum',
+          'network_kbps': 'minimum',
+          'disk_read_iops': 'minimum',
+          'disk_read_bps': 'minimum',
+          'disk_write_iops': 'minimum',
+          'disk_write_bps': 'minimum',
+          'shm_size': 'minimum',
+          'gpu_count': 'minimum',
+          'gpu_model': 'exact',
+          'cpu_vendor': 'exact',
+          'cpu_arch': 'exact',
+          'cpu_model': 'exact',
+          'kernel_version': 'exact',
+          'OSFamily': 'priority',
+          'container-image': 'priority',
+        },
+      },
+    },
+  ],
+  workers: [
+    {
+      local: {
+        worker_api_endpoint: {
+          uri: 'grpc://127.0.0.1:50061',
+        },
+        cas_fast_slow_store: 'WORKER_FAST_SLOW_STORE',
+        upload_action_result: {
+          ac_store: 'AC_MAIN_STORE',
+        },
+        work_directory: '/build/data-worker-test/work',
+        // Limit concurrent actions to avoid hitting cgroup PIDs limit (2048).
+        // Each GHC action spawns many threads; too many concurrent actions
+        // causes "failed to create OS thread" errors.
+        max_inflight_tasks: 4,
+        additional_environment: {
+          PATH: 'from_environment',
+        },
+        platform_properties: {
+          cpu_count: {
+            values: ['16'],
+          },
+          memory_kb: {
+            values: ['500000'],
+          },
+          network_kbps: {
+            values: ['100000'],
+          },
+          cpu_arch: {
+            values: ['x86_64'],
+          },
+          OSFamily: {
+            values: [''],
+          },
+          'container-image': {
+            values: [''],
+          },
+        },
+      },
+    },
+  ],
+  servers: [
+    {
+      name: 'public',
+      listener: {
+        http: {
+          socket_address: '0.0.0.0:50051',
+        },
+      },
+      services: {
+        cas: [
+          {
+            instance_name: '',
+            cas_store: 'WORKER_FAST_SLOW_STORE',
+          },
+          {
+            instance_name: 'main',
+            cas_store: 'WORKER_FAST_SLOW_STORE',
+          },
+        ],
+        ac: [
+          {
+            instance_name: '',
+            ac_store: 'AC_MAIN_STORE',
+          },
+          {
+            instance_name: 'main',
+            ac_store: 'AC_MAIN_STORE',
+          },
+        ],
+        execution: [
+          {
+            instance_name: '',
+            cas_store: 'WORKER_FAST_SLOW_STORE',
+            scheduler: 'MAIN_SCHEDULER',
+          },
+          {
+            instance_name: 'main',
+            cas_store: 'WORKER_FAST_SLOW_STORE',
+            scheduler: 'MAIN_SCHEDULER',
+          },
+        ],
+        capabilities: [
+          {
+            instance_name: '',
+            remote_execution: {
+              scheduler: 'MAIN_SCHEDULER',
+            },
+          },
+          {
+            instance_name: 'main',
+            remote_execution: {
+              scheduler: 'MAIN_SCHEDULER',
+            },
+          },
+        ],
+        bytestream: [
+          {
+            instance_name: '',
+            cas_store: 'WORKER_FAST_SLOW_STORE',
+          },
+          {
+            instance_name: 'main',
+            cas_store: 'WORKER_FAST_SLOW_STORE',
+          },
+        ],
+      },
+    },
+    {
+      name: 'private_workers_servers',
+      listener: {
+        http: {
+          socket_address: '0.0.0.0:50061',
+        },
+      },
+      services: {
+        worker_api: {
+          scheduler: 'MAIN_SCHEDULER',
+        },
+        admin: {},
+        health: {},
+      },
+    },
+  ],
+  global: {
+    max_open_files: 512,
+  },
+}
