@@ -16,6 +16,15 @@
 #     back to local execution automatically.
 #   - After local execution, results are uploaded to the remote cache.
 #
+# Worker RE platform (platforms//:worker_re):
+#   - Combines the persistent GHC worker with the RE hybrid executor.
+#   - GHC compilation actions use the persistent worker for local execution;
+#     if an action can be served from the remote cache the worker is skipped
+#     entirely.  After a local worker execution the result is uploaded to the
+#     remote cache so that subsequent builds (on this machine or others) can
+#     skip recompilation.
+#   - Same RE connectivity requirements as platforms//:re.
+#
 
 def _re_platform_impl(ctx):
     constraints = dict()
@@ -29,10 +38,12 @@ def _re_platform_impl(ctx):
         configuration = cfg,
         executor_config = CommandExecutorConfig(
             local_enabled = True,
-            remote_enabled = True,
+            remote_enabled = ctx.attrs.remote_enabled,
             remote_execution_properties = {},
             remote_execution_use_case = "buck2-default",
-            allow_cache_uploads = True,
+            use_persistent_workers = ctx.attrs.use_persistent_workers,
+            # Only allow cache uploads if remote execution is enabled.
+            allow_cache_uploads = ctx.attrs.remote_enabled,
             use_windows_path_separators = ctx.attrs.use_windows_path_separators,
         ),
     )
@@ -44,13 +55,14 @@ def _re_platform_impl(ctx):
         ExecutionPlatformRegistrationInfo(platforms = [platform]),
     ]
 
-_re_platform = rule(
+re_platform = rule(
     impl = _re_platform_impl,
     attrs = {
         "cpu_configuration": attrs.dep(providers = [ConfigurationInfo]),
         "os_configuration": attrs.dep(providers = [ConfigurationInfo]),
         "use_windows_path_separators": attrs.bool(),
+        "remote_enabled": attrs.bool(default = True),
+        "use_persistent_workers": attrs.bool(default = False),
     },
 )
 
-re_platform = _re_platform

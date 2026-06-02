@@ -25,6 +25,14 @@ remote_test_execution_toolchain(
             "remote_cache_enabled": False,
             "use_case": "default-buck2",
         },
+        "re": {
+            "capabilities": {},
+            "dependencies": [],
+            "listing_capabilities": {},
+            "local_enabled": True,
+            "remote_cache_enabled": True,
+            "use_case": "buck2-default",
+        },
     },
     visibility = ["PUBLIC"],
 )

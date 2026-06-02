@@ -28,8 +28,26 @@ nix run github:TraceMachina/nativelink/v1.3.2 -- ./nativelink.config.json5 > /tm
 Then run the tests with
 
 ```
-nix-shell --run "buck test buck2-haskell//tests/... --config execution_platform=platforms//:re
+nix-shell --run "buck test buck2-haskell//tests/... --config build.execution_platforms=platforms//:re
 ```
+
+For persistent worker testing, run
+
+```
+nix-shell --run "buck test buck2-haskell//tests/... --config ghc-worker.enable=true --config build.execution_platforms=platforms//:worker"
+```
+
+For hybrid mode (persistent worker + remote cache via NativeLink), first start
+`nativelink` as above, then run
+
+```
+nix-shell --run "buck test buck2-haskell//tests/... --config ghc-worker.enable=true --config build.execution_platforms=platforms//:worker_re --config test.re_profile=re"
+```
+
+The `platforms//:worker_re` platform enables the GHC persistent worker for
+local compilation while also querying the remote action cache before executing
+each action and uploading local results afterwards.  The `test.re_profile=re`
+option enables remote caching for test execution actions as well.
 
 ### ghc-persistent-worker
 

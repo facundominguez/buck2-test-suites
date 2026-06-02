@@ -12,3 +12,22 @@ re_platform(
     use_windows_path_separators = host_info().os.is_windows,
     visibility = ["PUBLIC"],
 )
+
+re_platform(
+    name = "worker",
+    cpu_configuration = host_configuration.cpu,
+    os_configuration = host_configuration.os,
+    use_windows_path_separators = host_info().os.is_windows,
+    use_persistent_workers = True,
+    remote_enabled = False,
+    visibility = ["PUBLIC"],
+)
+
+re_platform(
+    name = "worker_re",
+    cpu_configuration = host_configuration.cpu,
+    os_configuration = host_configuration.os,
+    use_windows_path_separators = host_info().os.is_windows,
+    use_persistent_workers = True,
+    visibility = ["PUBLIC"],
+)

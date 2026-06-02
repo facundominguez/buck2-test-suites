@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2026 Mercury Technologies, Inc.
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+load("@buck2-haskell//:persistent_worker.bzl", "persistent_worker")
+load(":build_worker.bzl", "worker_binary")
+
+worker_binary(
+    name = "ghc_worker",
+    binary_name = "ghc-worker",
+    src_subdir = "ghc-persistent-worker",
+    visibility = ["PUBLIC"],
+)
+
+worker_binary(
+    name = "buck_proxy",
+    binary_name = "buck-proxy",
+    src_subdir = "ghc-persistent-worker",
+    visibility = ["PUBLIC"],
+)
+
+persistent_worker(
+    name = "persistent_worker",
+    worker = ":ghc_worker",
+    worker_proxy = ":buck_proxy",
+    visibility = ["PUBLIC"],
+)
