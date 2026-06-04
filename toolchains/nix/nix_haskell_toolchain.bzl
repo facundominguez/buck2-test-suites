@@ -234,6 +234,8 @@ def _nix_haskell_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
 
     packages_info = _build_packages_info(ctx, drv_json, ghc_info, nix_config_json)
 
+    worker = ctx.attrs.worker
+
     return [
         DefaultInfo(
             sub_targets = sub_targets,
@@ -260,6 +262,7 @@ def _nix_haskell_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
             script_template_processor = ctx.attrs._script_template_processor,
             packages = HaskellToolchainPackagesInfo(dynamic = packages_info),
             use_worker = config_worker_enable,
+            worker = worker,
         ),
         HaskellPlatformInfo(
             name = host_info().arch,
@@ -282,6 +285,10 @@ nix_haskell_toolchain = rule(
         "_nix_drv_json_script": attrs.dep(
             providers = [RunInfo],
             default = "toolchains//tools:nix_drv_json",
+        ),
+        "worker": attrs.exec_dep(
+            providers = [WorkerInfo],
+            default = "toolchains//worker:persistent_worker",
         ),
         "compiler_flags": attrs.list(
             attrs.string(),
