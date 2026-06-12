@@ -38,5 +38,5 @@ To test `ghc-persistent-worker` run
 
 ```
 git clone https://github.com/MercuryTechnologies/ghc-persistent-worker
-nix-shell nix-shells/ghc-persistent-worker.nix --run "cabal test --enable-tests -fmwb all"
+nix-shell nix-shells/ghc-persistent-worker.nix --run "cd ghc-persistent-worker && cabal test --enable-tests -fmwb all"
 ```
