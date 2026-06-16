@@ -206,7 +206,6 @@ def _build_packages_info(ctx: AnalysisContext, drv_json: Artifact, ghc_info: Art
 def truthy(value: str) -> bool:
     return value.lower() in ["true", "yes", "on"]
 
-# Note: this must be kept in sync with //constraints/worker_type
 config_worker_enable = truthy(read_root_config("ghc-worker", "enable", "false"))
 
 def _nix_haskell_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
