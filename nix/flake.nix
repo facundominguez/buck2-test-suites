@@ -16,7 +16,7 @@
   };
 
   inputs.flake-compat = {
-    url = "https://github.com/lix-project/flake-compat/archive/main.tar.gz";
+    url = "github:lix-project/flake-compat";
     flake = false;
   };
 
