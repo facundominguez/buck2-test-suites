@@ -8,3 +8,10 @@ steps:
       - nix-shell --run 'buck test  --no-interactive-console buck2-haskell//tests/...'
     agents:
       queue: "self-hosted-linux"
+
+  - label: "ghc-persistent-worker"
+    commands:
+      - git clone https://github.com/MercuryTechnologies/ghc-persistent-worker
+      - cd ghc-persistent-worker && nix -L build
+    agents:
+      queue: "self-hosted-linux"
