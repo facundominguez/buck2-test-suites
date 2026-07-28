@@ -1,0 +1,5 @@
+steps:
+  - label: "buck2-haskell"
+    command: "nix-shell --run 'buck test buck2-haskell//tests/...'"
+    agents:
+      queue: "self-hosted-linux"
