@@ -1,9 +1,8 @@
 steps:
-  - label: "buck2-haskell clone"
-    command: "git clone https://github.com/MercuryTechnologies/buck2-haskell"
-    agents:
-      queue: "self-hosted-linux"
   - label: "buck2-haskell"
-    command: "nix-shell --run 'buck test buck2-haskell//tests/...'"
+    commands:
+      - git clone https://github.com/MercuryTechnologies/buck2-haskell
+      - nix-shell --run 'buck clean'
+      - nix-shell --run 'buck test buck2-haskell//tests/...'
     agents:
       queue: "self-hosted-linux"
