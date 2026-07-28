@@ -14,10 +14,6 @@ load(
 )
 load("@prelude//cxx:cxx_context.bzl", "get_cxx_toolchain_info")
 load(
-    "@prelude//cxx:cxx_library_utility.bzl",
-    "cxx_attr_exported_linker_flags",
-)
-load(
     "@prelude//cxx:preprocessor.bzl",
     "cxx_inherited_preprocessor_infos",
     "cxx_merge_cpreprocessors",
@@ -163,7 +159,7 @@ def _nix_native_lib_impl(ctx: AnalysisContext):
     providers.append(DefaultInfo(default_output = lib_output))
 
     pre_flags = []
-    pre_flags.extend(cxx_attr_exported_linker_flags(ctx))
+    pre_flags.extend(ctx.attrs.exported_linker_flags)
 
     if nix_dyn_info:
         providers.append(nix_dyn_info)

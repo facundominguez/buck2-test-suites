@@ -11,6 +11,14 @@ load("@toolchains//nix:nix_haskell_toolchain.bzl", "nix_haskell_toolchain")
 # Define cxx, rust, bash, and python toolchains
 default_nix_toolchains()
 
+# Not actually used, but needed to avoid an error during `audit visibility`
+# See: https://github.com/facebook/buck2-prelude/commit/411f25647c34dee2f5e036d905a318459634ab2b
+alias(
+    name = "cxx_no_default_deps",
+    actual = ":cxx",
+    visibility = ["PUBLIC"],
+)
+
 default_flake_attrs()
 
 remote_test_execution_toolchain(
