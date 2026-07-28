@@ -2,7 +2,9 @@ steps:
   - label: "buck2-haskell"
     commands:
       - git clone https://github.com/MercuryTechnologies/buck2-haskell
-      - nix-shell --run 'buck clean'
-      - nix-shell --run 'buck test buck2-haskell//tests/...'
+      - nix-shell --run 'buck kill --isolation-dir v2'
+      - nix-shell --run 'buck kill --isolation-dir ghci_tests'
+      - nix-shell --run 'buck kill --isolation-dir test_expected_failures'
+      - nix-shell --run 'buck test  --no-interactive-console buck2-haskell//tests/...'
     agents:
       queue: "self-hosted-linux"
