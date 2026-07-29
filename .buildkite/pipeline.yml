@@ -2,6 +2,7 @@ steps:
   - label: "buck2-haskell"
     commands:
       - git clone https://github.com/MercuryTechnologies/buck2-haskell
+      - cd buck2-haskell && git checkout "$rev_buck2_haskell" && cd ..
       - nix-shell --run 'buck kill --isolation-dir v2'
       - nix-shell --run 'buck kill --isolation-dir ghci_tests'
       - nix-shell --run 'buck kill --isolation-dir test_expected_failures'
@@ -12,6 +13,8 @@ steps:
   - label: "ghc-persistent-worker"
     commands:
       - git clone https://github.com/MercuryTechnologies/ghc-persistent-worker
-      - cd ghc-persistent-worker && nix -L build
+      - cd ghc-persistent-worker
+      - git checkout "$rev_ghc_persistent_worker"
+      - nix -L build
     agents:
       queue: "self-hosted-linux"
