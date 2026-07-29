@@ -1,8 +1,11 @@
 steps:
   - label: "buck2-haskell"
     commands:
-      - git clone https://github.com/MercuryTechnologies/buck2-haskell
-      - cd buck2-haskell && git checkout "$rev_buck2_haskell" && cd ..
+      - git clone https://gerrit.oss.mercury.com/buck2-haskell
+      - cd buck2-haskell
+      - if ! [ -z "${ref_buck2_haskell}" ]; then git fetch https://gerrit.oss.mercury.com/buck2-haskell "${ref_buck2_haskell}"; fi
+      - git checkout "$rev_buck2_haskell"
+      - cd ..
       - nix-shell --run 'buck kill --isolation-dir v2'
       - nix-shell --run 'buck kill --isolation-dir ghci_tests'
       - nix-shell --run 'buck kill --isolation-dir test_expected_failures'
@@ -12,8 +15,9 @@ steps:
 
   - label: "ghc-persistent-worker"
     commands:
-      - git clone https://github.com/MercuryTechnologies/ghc-persistent-worker
+      - git clone https://gerrit.oss.mercury.com/ghc-persistent-worker
       - cd ghc-persistent-worker
+      - if ! [ -z "${ref_ghc_persistent_worker}" ]; then git fetch https://gerrit.oss.mercury.com/ghc-persistent-worker "${ref_ghc_persistent_worker}"; fi
       - git checkout "$rev_ghc_persistent_worker"
       - nix -L build
     agents:
