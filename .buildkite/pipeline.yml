@@ -13,12 +13,22 @@ steps:
     agents:
       queue: "self-hosted-linux"
 
-  - label: "ghc-persistent-worker"
+  - label: "ghc-persistent-worker (mercury-ghc 9.10)"
     commands:
       - git clone https://gerrit.oss.mercury.com/ghc-persistent-worker
       - cd ghc-persistent-worker
       - if ! [ -z "${ref_ghc_persistent_worker}" ]; then git fetch https://gerrit.oss.mercury.com/ghc-persistent-worker "${ref_ghc_persistent_worker}"; fi
       - git checkout "$rev_ghc_persistent_worker"
       - nix -L build
+    agents:
+      queue: "self-hosted-linux"
+
+  - label: "ghc-persistent-worker (ghc 9.14)"
+    commands:
+      - git clone https://gerrit.oss.mercury.com/ghc-persistent-worker
+      - cd ghc-persistent-worker
+      - if ! [ -z "${ref_ghc_persistent_worker}" ]; then git fetch https://gerrit.oss.mercury.com/ghc-persistent-worker "${ref_ghc_persistent_worker}"; fi
+      - git checkout "$rev_ghc_persistent_worker"
+      - nix -L develop .#ghc914 --command cabal test all
     agents:
       queue: "self-hosted-linux"
