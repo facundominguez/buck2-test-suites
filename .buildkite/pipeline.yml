@@ -1,34 +1,53 @@
+agents:
+  queue: "self-hosted-linux"
+
+artifact_config: &checkout_artifacts
+  - "buck2-haskell.tar.gz"
+  - "ghc-persistent-worker.tar.gz"
+
 steps:
-  - label: "buck2-haskell"
+  - label: "checkout repos"
     commands:
       - git clone https://gerrit.oss.mercury.com/buck2-haskell
       - cd buck2-haskell
       - if ! [ -z "${ref_buck2_haskell}" ]; then git fetch https://gerrit.oss.mercury.com/buck2-haskell "${ref_buck2_haskell}"; fi
       - git checkout "$rev_buck2_haskell"
       - cd ..
+      - tar czf buck2-haskell.tar.gz buck2-haskell
+      - git clone https://gerrit.oss.mercury.com/ghc-persistent-worker
+      - cd ghc-persistent-worker
+      - if ! [ -z "${ref_ghc_persistent_worker}" ]; then git fetch https://gerrit.oss.mercury.com/ghc-persistent-worker "${ref_ghc_persistent_worker}"; fi
+      - git checkout "$rev_ghc_persistent_worker"
+      - cd ..
+      - tar czf ghc-persistent-worker.tar.gz ghc-persistent-worker
+    key: checkout
+    artifact_paths: *checkout_artifacts
+
+  - label: "buck2-haskell"
+    commands:
+      - buildkite-agent artifact download buck2-haskell.tar.gz .
+      - tar xzf buck2-haskell.tar.gz
       - nix-shell --run 'buck kill --isolation-dir v2'
       - nix-shell --run 'buck kill --isolation-dir ghci_tests'
       - nix-shell --run 'buck kill --isolation-dir test_expected_failures'
       - nix-shell --run 'buck test  --no-interactive-console buck2-haskell//tests/...'
-    agents:
-      queue: "self-hosted-linux"
+    depends_on:
+       - checkout
 
   - label: "ghc-persistent-worker (mercury-ghc 9.10)"
     commands:
-      - git clone https://gerrit.oss.mercury.com/ghc-persistent-worker
+      - buildkite-agent artifact download ghc-persistent-worker.tar.gz .
+      - tar xzf ghc-persistent-worker.tar.gz
       - cd ghc-persistent-worker
-      - if ! [ -z "${ref_ghc_persistent_worker}" ]; then git fetch https://gerrit.oss.mercury.com/ghc-persistent-worker "${ref_ghc_persistent_worker}"; fi
-      - git checkout "$rev_ghc_persistent_worker"
       - nix -L build
-    agents:
-      queue: "self-hosted-linux"
+    depends_on:
+      - checkout
 
   - label: "ghc-persistent-worker (ghc 9.14)"
     commands:
-      - git clone https://gerrit.oss.mercury.com/ghc-persistent-worker
+      - buildkite-agent artifact download ghc-persistent-worker.tar.gz .
+      - tar xzf ghc-persistent-worker.tar.gz
       - cd ghc-persistent-worker
-      - if ! [ -z "${ref_ghc_persistent_worker}" ]; then git fetch https://gerrit.oss.mercury.com/ghc-persistent-worker "${ref_ghc_persistent_worker}"; fi
-      - git checkout "$rev_ghc_persistent_worker"
       - nix -L develop .#ghc914 --command cabal test all
-    agents:
-      queue: "self-hosted-linux"
+    depends_on:
+      - checkout
