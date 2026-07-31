@@ -30,7 +30,8 @@ steps:
       - nix-shell --run 'buck kill --isolation-dir v2'
       - nix-shell --run 'buck kill --isolation-dir ghci_tests'
       - nix-shell --run 'buck kill --isolation-dir test_expected_failures'
-      - nix-shell --run 'buck test  --no-interactive-console buck2-haskell//tests/...'
+      - nix-shell --run 'buck build --console=simple buck2-haskell//tests:all_haskell_toolchain_libs'
+      - nix-shell --run 'buck test --console=simple buck2-haskell//tests/...'
     depends_on:
        - checkout
 
