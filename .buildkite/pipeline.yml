@@ -35,7 +35,7 @@ steps:
     depends_on:
        - checkout
 
-  - label: "ghc-persistent-worker (mercury-ghc 9.10)"
+  - label: "ghc-persistent-worker nix build (mercury-ghc 9.10)"
     commands:
       - buildkite-agent artifact download ghc-persistent-worker.tar.gz .
       - tar xzf ghc-persistent-worker.tar.gz
@@ -44,11 +44,32 @@ steps:
     depends_on:
       - checkout
 
+  - label: "ghc-persistent-worker (mercury-ghc 9.10 w/o linkables)"
+    commands:
+      - buildkite-agent artifact download ghc-persistent-worker.tar.gz .
+      - tar xzf ghc-persistent-worker.tar.gz
+      - cd ghc-persistent-worker
+      - CABAL_DIR="${TMPDIR:-/tmp}/.cabal_9101_1" nix -L develop .#mwb-26-07 --command cabal clean
+      - CABAL_DIR="${TMPDIR:-/tmp}/.cabal_9101_1" nix -L develop .#mwb-26-07 --command cabal test all -fmwb -ffixed-nodes
+    depends_on:
+      - checkout
+
+  - label: "ghc-persistent-worker (mercury-ghc 9.10 w/ linkables)"
+    commands:
+      - buildkite-agent artifact download ghc-persistent-worker.tar.gz .
+      - tar xzf ghc-persistent-worker.tar.gz
+      - cd ghc-persistent-worker
+      - CABAL_DIR="${TMPDIR:-/tmp}/.cabal_9101_2" nix -L develop .#mwb-26-07-linkables --command cabal clean
+      - CABAL_DIR="${TMPDIR:-/tmp}/.cabal_9101_2" nix -L develop .#mwb-26-07-linkables --command cabal test all -fmwb -ffixed-nodes -flinkables
+    depends_on:
+      - checkout
+
   - label: "ghc-persistent-worker (ghc 9.14)"
     commands:
       - buildkite-agent artifact download ghc-persistent-worker.tar.gz .
       - tar xzf ghc-persistent-worker.tar.gz
       - cd ghc-persistent-worker
-      - nix -L develop .#ghc914 --command cabal test all
+      - CABAL_DIR="${TMPDIR:-/tmp}/.cabal_9141" nix -L develop .#ghc914 --command cabal clean
+      - CABAL_DIR="${TMPDIR:-/tmp}/.cabal_9141" nix -L develop .#ghc914 --command cabal test all
     depends_on:
       - checkout
