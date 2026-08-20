@@ -12,6 +12,8 @@
     "deepseq"
     "directory"
     "filepath"
+    "file-io"
+    "flatparse"
     "ghc-paths"
     "grapesy"
     "hspec"

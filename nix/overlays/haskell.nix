@@ -59,6 +59,18 @@ let
     tls = hprev.tls_2_2_1;
   };
 
+  # for fixed nodes
+  patchDoctest = hfinal: hprev: {
+    doctest = final.haskell.lib.compose.overrideCabal (drv: {
+      src = final.applyPatches {
+        src = hprev.doctest.src;
+        patches = [ ./haskell-patches/doctest-fixed_nodes-adjustment.patch ];
+      };
+      doCheck = false;
+    }) hprev.doctest;
+    #inspection-testing = final.haskell.lib.compose.dontCheck hprev.inspection-testing;
+  };
+
   # Patch liquidhaskell-boot for Mercury-patched GHC 9.10.3.
   # The Mercury GHC patches remove mi_globals, move HomePackageTable,
   # change lookupHpt to IO, add CompressionIFace param to putWithUserData,
@@ -82,6 +94,7 @@ let
   allHaskellOverlays = [
     fixPackageDB
     fixGrapesy
+    patchDoctest
     patchLiquidHaskell
   ];
 in
