@@ -39,6 +39,26 @@ let
       );
   };
 
+  fixGrapesy = hfinal: hprev: {
+    crypton-x509 = hprev.crypton-x509_1_8_0;
+    crypton-x509-store = hprev.crypton-x509-store_1_8_0;
+    crypton-x509-system = hprev.crypton-x509-system_1_8_0;
+    crypton-x509-validation = hprev.crypton-x509-validation_1_8_0;
+    grapesy = final.haskell.lib.compose.overrideCabal (old: {
+      src = (final.fetchgit {
+        url = "https://github.com/well-typed/grapesy.git";
+        # master
+        rev = "bd6af64f69ff89e3a8fc02e2c81262e648f4715d";
+        sha256 = "sha256-4F+bUoytvrgOcQ8aIWbOY9uYsPoTZwQOlmh7ckgyK9M=";
+      }) + "/grapesy";
+    }) hprev.grapesy;
+    http-semantics = hprev.http-semantics_0_4_0;
+    http2 = hprev.http2_5_4_0;
+    http2-tls = final.haskell.lib.compose.unmarkBroken hprev.http2-tls;
+    network-run = hprev.network-run_0_5_0;
+    tls = hprev.tls_2_2_1;
+  };
+
   # Patch liquidhaskell-boot for Mercury-patched GHC 9.10.3.
   # The Mercury GHC patches remove mi_globals, move HomePackageTable,
   # change lookupHpt to IO, add CompressionIFace param to putWithUserData,
@@ -61,6 +81,7 @@ let
 
   allHaskellOverlays = [
     fixPackageDB
+    fixGrapesy
     patchLiquidHaskell
   ];
 in
