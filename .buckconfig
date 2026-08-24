@@ -6,6 +6,7 @@
 root = .
 prelude = prelude
 buck2-haskell = buck2-haskell
+ghc-persistent-worker = ghc-persistent-worker
 toolchains = toolchains
 nix = nix
 none = none
@@ -36,6 +37,7 @@ target_platform_detector_spec = \
     target:root//...->prelude//platforms:default \
     target:toolchains//...->prelude//platforms:default \
     target:buck2-haskell//...->prelude//platforms:default \
+    target:ghc-persistent-worker//...->prelude//platforms:default \
     target:nix//...->prelude//platforms:default \
     target:platforms//...->prelude//platforms:default
 

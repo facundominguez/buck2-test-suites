@@ -7,6 +7,7 @@
 [
     "aeson"
     "base"
+    "binary"
     "bytestring"
     "containers"
     "deepseq"

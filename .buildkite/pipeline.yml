@@ -23,14 +23,17 @@ steps:
     key: checkout
     artifact_paths: *checkout_artifacts
 
-  - label: "buck2-haskell"
+  - label: "buck2-haskell (persistent worker on mercury-ghc 9.10)"
     commands:
       - buildkite-agent artifact download buck2-haskell.tar.gz .
+      - buildkite-agent artifact download ghc-persistent-worker.tar.gz .
       - tar xzf buck2-haskell.tar.gz
+      - tar xzf ghc-persistent-worker.tar.gz
       - nix-shell --run 'buck kill --isolation-dir v2'
       - nix-shell --run 'buck kill --isolation-dir ghci_tests'
       - nix-shell --run 'buck kill --isolation-dir test_expected_failures'
       - nix-shell --run 'buck build --console=simple buck2-haskell//tests:all_haskell_toolchain_libs'
+      - nix-shell --run 'buck build --console=simple ghc-persistent-worker//...'
       - nix-shell --run 'buck test --console=simple buck2-haskell//tests/...'
     depends_on:
        - checkout
