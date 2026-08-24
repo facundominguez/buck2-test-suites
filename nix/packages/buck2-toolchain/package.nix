@@ -27,6 +27,7 @@
   skopeo,
   watchman,
   z3,
+  zlib,
 # keep-sorted end
 }:
 let
@@ -161,6 +162,7 @@ in
     pyrefly-wrapper
     ripgrep
     skopeo
+    zlib
     # keep-sorted end
     ;
 
