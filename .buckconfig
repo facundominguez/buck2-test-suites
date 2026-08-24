@@ -34,12 +34,12 @@ prelude = bundled
 # The syntax is documented (only?) in the Buck2 source.
 # See: https://github.com/facebook/buck2/blob/48f4f3954912e210eaffded56e80ffc3ca2c9fc8/app/buck2_node/src/configuration/target_platform_detector.rs#L11-L25
 target_platform_detector_spec = \
-    target:root//...->prelude//platforms:default \
-    target:toolchains//...->prelude//platforms:default \
-    target:buck2-haskell//...->prelude//platforms:default \
-    target:ghc-persistent-worker//...->prelude//platforms:default \
-    target:nix//...->prelude//platforms:default \
-    target:platforms//...->prelude//platforms:default
+    target:root//...->platforms//:default \
+    target:toolchains//...->platforms//:default \
+    target:buck2-haskell//...->platforms//:default \
+    target:ghc-persistent-worker//...->platforms//:default \
+    target:nix//...->platforms//:default \
+    target:platforms//...->platforms//:default
 
 [project]
 # See Note [File watching].
@@ -69,4 +69,4 @@ hash_all_commands = true
 file_watcher = watchman
 
 [build]
-execution_platforms = prelude//platforms:default
+execution_platforms = platforms//:default

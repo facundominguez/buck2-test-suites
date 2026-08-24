@@ -4,6 +4,45 @@
 
 # Custom execution platforms for remote execution (RE) and local-only builds.
 #
+
+def _local_execution_platform(ctx: AnalysisContext) -> list[Provider]:
+    constraints = dict()
+    constraints.update(ctx.attrs.cpu_configuration[ConfigurationInfo].constraints)
+    constraints.update(ctx.attrs.os_configuration[ConfigurationInfo].constraints)
+    cfg = ConfigurationInfo(constraints = constraints, values = {})
+
+    name = ctx.label.raw_target()
+    platform = ExecutionPlatformInfo(
+        label = name,
+        configuration = cfg,
+        executor_config = CommandExecutorConfig(
+            local_enabled = True,
+            # Without this, buck2 silently runs `WorkerRunInfo` actions one-shot
+            # instead. The `build.use_persistent_workers` buckconfig buck2
+            # documents is unimplemented in OSS, so this is the only knob.
+            use_persistent_workers = True,
+            remote_enabled = False,
+            remote_cache_enabled = False,
+            allow_cache_uploads = False,
+            use_limited_hybrid = False,
+        ),
+    )
+
+    return [
+        DefaultInfo(),
+        platform,
+        PlatformInfo(label = str(name), configuration = cfg),
+        ExecutionPlatformRegistrationInfo(platforms = [platform], fallback = "error"),
+    ]
+
+local_execution_platform = rule(
+    impl = _local_execution_platform,
+    attrs = {
+        "cpu_configuration": attrs.dep(providers = [ConfigurationInfo]),
+        "os_configuration": attrs.dep(providers = [ConfigurationInfo]),
+    },
+)
+
 # RE platform (hybrid mode, platforms//:re):
 #   - Requires a running NativeLink (or compatible REAPI) server on the address
 #     configured in [buck2_re_client].
@@ -17,7 +56,7 @@
 #   - After local execution, results are uploaded to the remote cache.
 #
 
-def _re_platform_impl(ctx):
+def _remote_execution_platform_impl(ctx):
     constraints = dict()
     constraints.update(ctx.attrs.cpu_configuration[ConfigurationInfo].constraints)
     constraints.update(ctx.attrs.os_configuration[ConfigurationInfo].constraints)
@@ -33,6 +72,10 @@ def _re_platform_impl(ctx):
             remote_execution_properties = {},
             remote_execution_use_case = "buck2-default",
             allow_cache_uploads = True,
+            # Without this, buck2 silently runs `WorkerRunInfo` actions one-shot
+            # instead. The `build.use_persistent_workers` buckconfig buck2
+            # documents is unimplemented in OSS, so this is the only knob.
+            use_persistent_workers = True,
             use_windows_path_separators = ctx.attrs.use_windows_path_separators,
         ),
     )
@@ -44,13 +87,11 @@ def _re_platform_impl(ctx):
         ExecutionPlatformRegistrationInfo(platforms = [platform]),
     ]
 
-_re_platform = rule(
-    impl = _re_platform_impl,
+remote_execution_platform = rule(
+    impl = _remote_execution_platform_impl,
     attrs = {
         "cpu_configuration": attrs.dep(providers = [ConfigurationInfo]),
         "os_configuration": attrs.dep(providers = [ConfigurationInfo]),
         "use_windows_path_separators": attrs.bool(),
     },
 )
-
-re_platform = _re_platform

@@ -7,6 +7,7 @@ load("@prelude//toolchains:remote_test_execution.bzl", "remote_test_execution_to
 load("@toolchains//nix:default_toolchains.bzl", "default_flake_attrs", "default_nix_toolchains", "exec_compatible_with")
 load("@toolchains//nix:nix_build.bzl", "nix_build")
 load("@toolchains//nix:nix_haskell_toolchain.bzl", "nix_haskell_toolchain")
+load("@buck2-haskell//:persistent_worker.bzl", "persistent_worker")
 
 # Define cxx, rust, bash, and python toolchains
 default_nix_toolchains()
@@ -93,4 +94,11 @@ nix_build(
     binary = "skopeo",
     flake = "@nix//:nix_overlays",
     visibility = ["PUBLIC"],
+)
+
+persistent_worker(
+    name = "persistent_worker",
+    visibility = ["PUBLIC"],
+    worker = "ghc-persistent-worker//ghc-worker:ghc-worker",
+    worker_proxy = "ghc-persistent-worker//buck-proxy:buck-proxy",
 )
