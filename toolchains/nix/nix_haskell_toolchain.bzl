@@ -296,11 +296,11 @@ nix_haskell_toolchain = rule(
         ),
         "ghc_pkg": attrs.dep(
             providers = [RunInfo],
-            default = "//:ghc[ghc-pkg]",
+            default = "//:ghc-pkg",
         ),
         "haddock": attrs.dep(
             providers = [RunInfo],
-            default = "//:ghc[haddock]",
+            default = "//:haddock",
         ),
         "flake": attrs.source(allow_directory = True),
     },
