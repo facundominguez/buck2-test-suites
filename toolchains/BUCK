@@ -4,6 +4,7 @@
 
 load("@prelude//tests:test_toolchain.bzl", "noop_test_toolchain")
 load("@prelude//toolchains:remote_test_execution.bzl", "remote_test_execution_toolchain")
+load("@toolchains//:impure_binary.bzl", "impure_binary")
 load("@toolchains//nix:default_toolchains.bzl", "default_flake_attrs", "default_nix_toolchains", "exec_compatible_with")
 load("@toolchains//nix:nix_build.bzl", "nix_build")
 load("@toolchains//nix:nix_haskell_toolchain.bzl", "nix_haskell_toolchain")
@@ -61,14 +62,29 @@ nix_haskell_toolchain(
     visibility = ["PUBLIC"],
 )
 
+# impure_binary(
+#     name = "ghc",
+#     binary_path = "ghc-9.10-patched/_build/stage1/bin/ghc",
+# )
+#
+# impure_binary(
+#     name = "ghc-pkg",
+#     binary_path = "ghc-9.10-patched/_build/stage1/bin/ghc-pkg",
+# )
+#
+# impure_binary(
+#     name = "haddock",
+#     binary_path = "ghc-9.10-patched/_build/stage1/bin/haddock",
+# )
+
 nix_build(
     name = "ghc",
     binaries = [
-        "ghc-pkg",
-        "haddock",
-    ],
-    binary = "ghc",
-    flake = "@nix//:nix_overlays",
+       "ghc-pkg",
+       "haddock",
+   ],
+   binary = "ghc",
+   flake = "@nix//:nix_overlays",
 )
 
 nix_build(
